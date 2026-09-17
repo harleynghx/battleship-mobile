@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { useBattleshipEngine } from '@/hooks/useBattleshipEngine';
 import { BoardGrid } from '@/components/game/BoardGrid';
@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function GameScreen() {
   const engine = useBattleshipEngine();
+  const [isBoardDragging, setIsBoardDragging] = useState(false);
 
   const handleCellPress = (x: number, y: number) => {
     if (engine.gameState === GameState.PlacingShips) {
@@ -20,7 +21,7 @@ export default function GameScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} alwaysBounceVertical={true} scrollEnabled={!isBoardDragging}>
         <Stack.Screen options={{ title: 'BATTLE T3RM1N4L', headerStyle: { backgroundColor: Colors.dark.backgroundElement }, headerTintColor: Colors.dark.text, headerTitleStyle: { fontFamily: 'Orbitron', fontSize: 24 } }} />
 
         <View style={styles.header}>
@@ -38,7 +39,17 @@ export default function GameScreen() {
           board={engine.board}
           ships={engine.ships} 
           onCellPress={handleCellPress} 
-          isPlacementMode={engine.gameState === GameState.PlacingShips} 
+          isPlacementMode={engine.gameState === GameState.PlacingShips}
+          selectedShip={engine.ships.find(s => s.id === engine.selectedShipId) || null}
+          onShipPlace={(x, y) => engine.placeShip(x, y)}
+          onShipPickup={(shipId, isHorizontal) => {
+            engine.removeShip(shipId);
+            engine.setSelectedShipId(shipId);
+            engine.setIsHorizontal(isHorizontal);
+          }}
+          canPlaceShip={engine.canPlaceShip}
+          isHorizontal={engine.isHorizontal}
+          onDragStateChange={setIsBoardDragging}
         />
 
         {engine.gameState === GameState.PlacingShips && (
@@ -52,17 +63,19 @@ export default function GameScreen() {
               </Pressable>
             </View>
 
-            {engine.ships.filter(s => !s.isPlaced).map(ship => (
-              <Pressable 
-                key={ship.id}
-                style={[styles.shipBtn, engine.selectedShipId === ship.id && styles.shipBtnSelected]}
-                onPress={() => engine.setSelectedShipId(ship.id)}
-              >
-                <Text style={styles.shipBtnText}>
-                  {engine.selectedShipId === ship.id ? '> ' : ''}{ship.type} (SIZE: {ship.size})
-                </Text>
-              </Pressable>
-            ))}
+            <ScrollView style={styles.fleetScroll} alwaysBounceVertical={true} nestedScrollEnabled={true}>
+              {engine.ships.filter(s => !s.isPlaced).map(ship => (
+                <Pressable 
+                  key={ship.id}
+                  style={[styles.shipBtn, engine.selectedShipId === ship.id && styles.shipBtnSelected]}
+                  onPress={() => engine.setSelectedShipId(ship.id)}
+                >
+                  <Text style={styles.shipBtnText}>
+                    {engine.selectedShipId === ship.id ? '> ' : ''}{ship.type} (SIZE: {ship.size})
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
         )}
 
@@ -89,6 +102,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.dark.background,
   },
   content: {
+    flexGrow: 1,
     padding: 20,
     alignItems: 'center',
   },
@@ -167,5 +181,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Orbitron',
     fontSize: 14,
     color: Colors.dark.text,
+  },
+  fleetScroll: {
+    maxHeight: 180,
   }
 });

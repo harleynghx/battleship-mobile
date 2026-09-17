@@ -22,6 +22,46 @@ export const useBattleshipEngine = () => {
   const [selectedShipId, setSelectedShipId] = useState<string | null>(null);
   const [isHorizontal, setIsHorizontal] = useState(true); // Orientation for placement
 
+  const canPlaceShip = useCallback((ship: Ship, x: number, y: number, horizontal: boolean): boolean => {
+    // Check bounds
+    if (horizontal && x + ship.size > BOARD_SIZE) return false;
+    if (!horizontal && y + ship.size > BOARD_SIZE) return false;
+
+    // Check overlap
+    for (let i = 0; i < ship.size; i++) {
+      const checkX = horizontal ? x + i : x;
+      const checkY = horizontal ? y : y + i;
+      // Note: If we are picking up a ship to move it, we should theoretically ignore its own cells,
+      // but since we will call removeShip before placing, it's fine.
+      if (board[checkY][checkX] !== CellState.Water) {
+        return false;
+      }
+    }
+    return true;
+  }, [board]);
+
+  const removeShip = useCallback((shipId: string) => {
+    const ship = ships.find(s => s.id === shipId);
+    if (!ship || !ship.isPlaced) return;
+
+    // Remove from board
+    const newBoard = [...board].map(row => [...row]);
+    ship.coordinates.forEach(c => {
+      newBoard[c.y][c.x] = CellState.Water;
+    });
+    setBoard(newBoard);
+
+    // Update ships
+    const newShips = ships.map(s => {
+      if (s.id === shipId) {
+        return { ...s, isPlaced: false, coordinates: [] };
+      }
+      return s;
+    });
+    setShips(newShips);
+    setGameState(GameState.PlacingShips);
+  }, [board, ships]);
+
   const placeShip = useCallback(
     (x: number, y: number) => {
       if (!selectedShipId) return;
@@ -35,13 +75,13 @@ export const useBattleshipEngine = () => {
 
       // Check overlap
       const coordinates: Coordinate[] = [];
+      if (!canPlaceShip(ship, x, y, isHorizontal)) {
+        return false; // Return false if placement fails
+      }
+
       for (let i = 0; i < ship.size; i++) {
         const checkX = isHorizontal ? x + i : x;
         const checkY = isHorizontal ? y : y + i;
-        if (board[checkY][checkX] !== CellState.Water) {
-          // Overlap detected
-          return;
-        }
         coordinates.push({ x: checkX, y: checkY });
       }
 
@@ -107,6 +147,8 @@ export const useBattleshipEngine = () => {
     isHorizontal,
     setIsHorizontal,
     placeShip,
+    removeShip,
+    canPlaceShip,
     fireShot,
     resetGame,
   };
