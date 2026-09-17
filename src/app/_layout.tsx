@@ -4,6 +4,7 @@ import { useColorScheme } from 'react-native';
 import { useFonts } from 'expo-font';
 import { VT323_400Regular } from '@expo-google-fonts/vt323';
 import { ShareTechMono_400Regular } from '@expo-google-fonts/share-tech-mono';
+import { PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
 import { Orbitron_400Regular, Orbitron_700Bold, Orbitron_900Black } from '@expo-google-fonts/orbitron';
 import { useEffect } from 'react';
 
@@ -21,6 +22,7 @@ export default function TabLayout() {
     Orbitron: Orbitron_400Regular,
     OrbitronBold: Orbitron_700Bold,
     OrbitronBlack: Orbitron_900Black,
+    PressStart2P: PressStart2P_400Regular,
   });
 
   useEffect(() => {
@@ -33,21 +35,21 @@ export default function TabLayout() {
     return null;
   }
 
-  // Custom retro terminal theme
-  const terminalTheme = {
+  // Custom retro arcade theme
+  const arcadeTheme = {
     ...DarkTheme,
     colors: {
       ...DarkTheme.colors,
-      background: '#0a0a0a',
-      card: '#111',
-      text: '#00ff41',
-      border: '#003b00',
-      notification: '#00ff41',
+      background: '#271C22',
+      card: '#4A2832',
+      text: '#FFD600',
+      border: '#D52B5D',
+      notification: '#FFD600',
     },
   };
 
   return (
-    <ThemeProvider value={terminalTheme}>
+    <ThemeProvider value={arcadeTheme}>
       <AnimatedSplashOverlay />
       <Stack screenOptions={{ headerShown: false }} />
     </ThemeProvider>

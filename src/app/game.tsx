@@ -9,89 +9,110 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function GameScreen() {
   const engine = useBattleshipEngine();
-  const [isBoardDragging, setIsBoardDragging] = useState(false);
 
   const handleCellPress = (x: number, y: number) => {
-    if (engine.gameState === GameState.PlacingShips) {
-      engine.placeShip(x, y);
-    } else if (engine.gameState === GameState.Playing) {
-      engine.fireShot(x, y);
+    if (engine.gameState === GameState.Hiding) {
+      engine.hideGhost(x, y);
+    } else if (engine.gameState === GameState.Seeking) {
+      engine.guessCoordinate(x, y);
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.content} alwaysBounceVertical={true} scrollEnabled={!isBoardDragging}>
-        <Stack.Screen options={{ title: 'BATTLE T3RM1N4L', headerStyle: { backgroundColor: Colors.dark.backgroundElement }, headerTintColor: Colors.dark.text, headerTitleStyle: { fontFamily: 'Orbitron', fontSize: 24 } }} />
+  const renderSetup = () => (
+    <View style={styles.centerContainer}>
+      <Text style={styles.title}>SELECT PLAYERS</Text>
+      {[2, 3, 4].map(num => (
+        <Pressable key={num} style={styles.actionBtn} onPress={() => engine.startGame(num)}>
+          <Text style={styles.actionBtnText}>{num} PLAYERS</Text>
+        </Pressable>
+      ))}
+      <Pressable style={[styles.actionBtn, { marginTop: 40, borderColor: Colors.dark.textSecondary }]} onPress={() => router.replace('/')}>
+         <Text style={[styles.actionBtnText, { color: Colors.dark.textSecondary }]}>MAIN MENU</Text>
+      </Pressable>
+    </View>
+  );
 
+  const renderPassingDevice = () => (
+    <View style={styles.centerContainer}>
+      <Text style={styles.title}>PASS DEVICE TO</Text>
+      <Text style={[styles.highlightTitle, { color: engine.currentPlayer?.color }]}>
+        {engine.currentPlayer?.name}
+      </Text>
+      <Text style={styles.subtitle}>
+        Keep your screen hidden from others!
+      </Text>
+      <Pressable style={styles.readyBtn} onPress={engine.confirmPassDevice}>
+        <Text style={styles.readyBtnText}>I'M READY</Text>
+      </Pressable>
+    </View>
+  );
+
+  const renderBoard = () => {
+    let headerText = '';
+    let subHeaderText = '';
+    
+    if (engine.gameState === GameState.Hiding) {
+      headerText = 'HIDE PHASE';
+      subHeaderText = 'TAP TO HIDE YOUR GHOST';
+    } else if (engine.gameState === GameState.Seeking) {
+      headerText = 'SEEK PHASE';
+      subHeaderText = 'GUESS A LOCATION';
+    }
+
+    return (
+      <ScrollView contentContainerStyle={styles.content} alwaysBounceVertical={true}>
         <View style={styles.header}>
-          <Text style={styles.statusText}>
-            {engine.gameState === GameState.PlacingShips ? '> PLACEMENT_MODE: ACTIVE' : '> COMBAT_MODE: ENGAGED'}
+          <Text style={[styles.statusText, { color: engine.currentPlayer?.color }]}>
+            {engine.currentPlayer?.name}'S TURN
           </Text>
-          <Text style={styles.subStatusText}>
-            {engine.gameState === GameState.PlacingShips 
-              ? 'Select a ship below and tap the grid to deploy.' 
-              : 'Tap the grid to fire at enemy coordinates.'}
-          </Text>
+          <Text style={styles.subStatusText}>{headerText}</Text>
+          <Text style={styles.instructionText}>{subHeaderText}</Text>
         </View>
 
         <BoardGrid 
           board={engine.board}
-          ships={engine.ships} 
           onCellPress={handleCellPress} 
-          isPlacementMode={engine.gameState === GameState.PlacingShips}
-          selectedShip={engine.ships.find(s => s.id === engine.selectedShipId) || null}
-          onShipPlace={(x, y) => engine.placeShip(x, y)}
-          onShipPickup={(shipId, isHorizontal) => {
-            engine.removeShip(shipId);
-            engine.setSelectedShipId(shipId);
-            engine.setIsHorizontal(isHorizontal);
-          }}
-          canPlaceShip={engine.canPlaceShip}
-          isHorizontal={engine.isHorizontal}
-          onDragStateChange={setIsBoardDragging}
+          disabled={engine.gameState !== GameState.Hiding && engine.gameState !== GameState.Seeking}
         />
 
-        {engine.gameState === GameState.PlacingShips && (
+        {engine.gameState === GameState.Seeking && (
           <View style={styles.fleetPanel}>
-            <Text style={styles.panelTitle}>/// AVAILABLE_FLEET</Text>
-            
-            <View style={styles.orientationToggle}>
-              <Text style={styles.orientationText}>ORIENTATION: {engine.isHorizontal ? '[HORZ]' : '[VERT]'}</Text>
-              <Pressable style={styles.actionBtn} onPress={() => engine.setIsHorizontal(!engine.isHorizontal)}>
-                <Text style={styles.actionBtnText}>TOGGLE</Text>
-              </Pressable>
-            </View>
-
-            <ScrollView style={styles.fleetScroll} alwaysBounceVertical={true} nestedScrollEnabled={true}>
-              {engine.ships.filter(s => !s.isPlaced).map(ship => (
-                <Pressable 
-                  key={ship.id}
-                  style={[styles.shipBtn, engine.selectedShipId === ship.id && styles.shipBtnSelected]}
-                  onPress={() => engine.setSelectedShipId(ship.id)}
-                >
-                  <Text style={styles.shipBtnText}>
-                    {engine.selectedShipId === ship.id ? '> ' : ''}{ship.type} (SIZE: {ship.size})
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
+             <Text style={styles.panelTitle}>ALIVE PLAYERS</Text>
+             {engine.players.filter(p => !p.isEliminated).map(p => (
+               <Text key={p.id} style={[styles.alivePlayer, { color: p.color }]}>
+                 {p.name}
+               </Text>
+             ))}
           </View>
         )}
 
-        {engine.gameState === GameState.Playing && (
-          <View style={styles.fleetPanel}>
-            <Text style={styles.panelTitle}>/// TACTICAL_OPTIONS</Text>
-            <Pressable style={styles.actionBtn} onPress={engine.resetGame}>
-              <Text style={styles.actionBtnText}>ABORT_SIMULATION (RESET)</Text>
-            </Pressable>
-          </View>
-        )}
-
-        <Pressable style={[styles.actionBtn, { marginTop: 20 }]} onPress={() => router.back()}>
-           <Text style={styles.actionBtnText}>RETURN_TO_BASE</Text>
+        <Pressable style={[styles.actionBtn, { marginTop: 20, paddingVertical: 10 }]} onPress={() => router.replace('/')}>
+           <Text style={[styles.actionBtnText, { fontSize: 8 }]}>QUIT GAME</Text>
         </Pressable>
       </ScrollView>
+    );
+  };
+
+  const renderGameOver = () => (
+    <View style={styles.centerContainer}>
+      <Text style={styles.title}>GAME OVER</Text>
+      <Text style={[styles.highlightTitle, { color: engine.winner?.color }]}>
+        {engine.winner?.name} WINS!
+      </Text>
+      <Pressable style={[styles.actionBtn, { marginTop: 40 }]} onPress={engine.resetGame}>
+        <Text style={styles.actionBtnText}>PLAY AGAIN</Text>
+      </Pressable>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <Stack.Screen options={{ title: 'HIDE & SEEK', headerStyle: { backgroundColor: Colors.dark.backgroundElement }, headerTintColor: Colors.dark.text, headerTitleStyle: { fontFamily: 'PressStart2P', fontSize: 14 } }} />
+      
+      {engine.gameState === GameState.SetupPlayers && renderSetup()}
+      {engine.gameState === GameState.PassingDevice && renderPassingDevice()}
+      {(engine.gameState === GameState.Hiding || engine.gameState === GameState.Seeking) && renderBoard()}
+      {engine.gameState === GameState.GameOver && renderGameOver()}
     </SafeAreaView>
   );
 }
@@ -101,88 +122,107 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.dark.background,
   },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
   content: {
     flexGrow: 1,
     padding: 20,
     alignItems: 'center',
   },
+  title: {
+    fontFamily: 'PressStart2P',
+    fontSize: 16,
+    color: Colors.dark.text,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  highlightTitle: {
+    fontFamily: 'PressStart2P',
+    fontSize: 20,
+    marginBottom: 20,
+    textAlign: 'center',
+    textShadowColor: 'rgba(255, 255, 255, 0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  subtitle: {
+    fontFamily: 'PressStart2P',
+    fontSize: 10,
+    color: Colors.dark.textSecondary,
+    marginBottom: 40,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
   header: {
     width: '100%',
     marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.backgroundSelected,
-    paddingBottom: 10,
+    alignItems: 'center',
   },
   statusText: {
-    fontFamily: 'Orbitron',
-    fontSize: 18,
-    color: Colors.dark.text,
+    fontFamily: 'PressStart2P',
+    fontSize: 14,
+    marginBottom: 8,
   },
   subStatusText: {
-    fontFamily: 'Orbitron',
-    fontSize: 16,
+    fontFamily: 'PressStart2P',
+    fontSize: 12,
     color: Colors.dark.textSecondary,
-    marginTop: 4,
+    marginBottom: 8,
+  },
+  instructionText: {
+    fontFamily: 'PressStart2P',
+    fontSize: 10,
+    color: Colors.dark.text,
+  },
+  actionBtn: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    backgroundColor: Colors.dark.backgroundElement,
+    borderWidth: 4,
+    borderColor: Colors.dark.text,
+    alignItems: 'center',
+    marginBottom: 15,
+    width: 200,
+  },
+  actionBtnText: {
+    fontFamily: 'PressStart2P',
+    fontSize: 10,
+    color: Colors.dark.text,
+  },
+  readyBtn: {
+    paddingVertical: 20,
+    paddingHorizontal: 30,
+    backgroundColor: Colors.dark.backgroundSelected,
+    borderWidth: 4,
+    borderColor: Colors.dark.text,
+  },
+  readyBtnText: {
+    fontFamily: 'PressStart2P',
+    fontSize: 14,
+    color: Colors.dark.text,
   },
   fleetPanel: {
     width: '100%',
     marginTop: 20,
     padding: 15,
     backgroundColor: Colors.dark.backgroundElement,
-    borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 4,
     borderColor: Colors.dark.backgroundSelected,
+    alignItems: 'center',
   },
   panelTitle: {
-    fontFamily: 'Orbitron',
-    fontSize: 16,
+    fontFamily: 'PressStart2P',
+    fontSize: 12,
     color: Colors.dark.text,
     marginBottom: 15,
   },
-  orientationToggle: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.backgroundSelected,
-  },
-  orientationText: {
-    fontFamily: 'Orbitron',
-    fontSize: 18,
-    color: Colors.dark.text,
-  },
-  shipBtn: {
-    padding: 10,
-    marginBottom: 8,
-    backgroundColor: Colors.dark.background,
-    borderWidth: 1,
-    borderColor: Colors.dark.backgroundSelected,
-  },
-  shipBtnSelected: {
-    borderColor: Colors.dark.text,
-    backgroundColor: Colors.dark.backgroundSelected,
-  },
-  shipBtnText: {
-    fontFamily: 'Orbitron',
-    fontSize: 18,
-    color: Colors.dark.text,
-  },
-  actionBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: Colors.dark.backgroundSelected,
-    borderWidth: 1,
-    borderColor: Colors.dark.text,
-    alignItems: 'center',
-  },
-  actionBtnText: {
-    fontFamily: 'Orbitron',
-    fontSize: 14,
-    color: Colors.dark.text,
-  },
-  fleetScroll: {
-    maxHeight: 180,
+  alivePlayer: {
+    fontFamily: 'PressStart2P',
+    fontSize: 10,
+    marginBottom: 10,
   }
 });

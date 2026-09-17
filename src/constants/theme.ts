@@ -9,18 +9,18 @@ import { Platform } from "react-native";
 
 export const Colors = {
   light: {
-    text: '#00ff41',
-    background: '#0a0a0a',
-    backgroundElement: '#111111',
-    backgroundSelected: '#003b00',
-    textSecondary: '#008f11',
+    text: '#FFD600', // Pacman Yellow
+    background: '#271C22', // Surface
+    backgroundElement: '#4A2832', // Tertiary Variant
+    backgroundSelected: '#D52B5D', // Arcade Pink
+    textSecondary: '#99CFD4', // Ghost Cyan
   },
   dark: {
-    text: '#00ff41',
-    background: '#0a0a0a',
-    backgroundElement: '#111111',
-    backgroundSelected: '#003b00',
-    textSecondary: '#008f11',
+    text: '#FFD600',
+    background: '#271C22',
+    backgroundElement: '#4A2832',
+    backgroundSelected: '#D52B5D',
+    textSecondary: '#99CFD4',
   },
 } as const;
 
@@ -28,16 +28,16 @@ export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
 export const Fonts = Platform.select({
   ios: {
-    sans: 'Orbitron',
-    serif: 'Orbitron',
-    rounded: 'Orbitron',
-    mono: 'Orbitron',
+    sans: 'PressStart2P',
+    serif: 'PressStart2P',
+    rounded: 'PressStart2P',
+    mono: 'PressStart2P',
   },
   default: {
-    sans: 'Orbitron',
-    serif: 'Orbitron',
-    rounded: 'Orbitron',
-    mono: 'Orbitron',
+    sans: 'PressStart2P',
+    serif: 'PressStart2P',
+    rounded: 'PressStart2P',
+    mono: 'PressStart2P',
   },
   web: {
     sans: 'var(--font-display)',
