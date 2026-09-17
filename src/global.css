@@ -1,0 +1,10 @@
+:root {
+  --font-display: 'Orbitron', sans-serif;
+  --font-mono: 'Orbitron', monospace;
+  --font-rounded: 'Orbitron', sans-serif;
+  --font-serif: 'Orbitron', sans-serif;
+  
+  /* Adding some global terminal styling */
+  background-color: #0a0a0a;
+  color: #00ff41;
+}
