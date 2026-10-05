@@ -25,12 +25,16 @@ export const useBattleshipEngine = () => {
 
   const startGame = useCallback((playerCount: number) => {
     const newPlayers: Player[] = [];
+    const monstersAllowed = playerCount === 2 ? 8 : (playerCount === 3 ? 6 : 4);
+
     for (let i = 0; i < playerCount; i++) {
       newPlayers.push({
         id: `p${i}`,
         name: PLAYER_NAMES[i],
         color: AVAILABLE_COLORS[i],
-        hiddenCoordinate: null,
+        hiddenCoordinates: [],
+        monstersAllowed: monstersAllowed,
+        aliveMonsters: monstersAllowed,
         isEliminated: false,
       });
     }
@@ -42,29 +46,92 @@ export const useBattleshipEngine = () => {
   }, []);
 
   const confirmPassDevice = useCallback(() => {
-    // If all players have hidden, we are in Seeking phase. Otherwise, Hiding phase.
-    const allHidden = players.every(p => p.hiddenCoordinate !== null);
+    // If all players have hidden all their monsters, we are in Seeking phase.
+    const allHidden = players.every(p => p.hiddenCoordinates.length === p.monstersAllowed);
     if (allHidden) {
+      // Find collisions (blocks with 2+ players)
+      const coordinateMap: { [key: string]: string[] } = {};
+      players.forEach(p => {
+        p.hiddenCoordinates.forEach(c => {
+          const key = `${c.x},${c.y}`;
+          if (!coordinateMap[key]) coordinateMap[key] = [];
+          coordinateMap[key].push(p.id);
+        });
+      });
+
+      const updatedPlayers = [...players];
+      const newBoard = [...board].map(row => [...row]);
+      let someoneBusted = false;
+
+      Object.entries(coordinateMap).forEach(([key, playerIds]) => {
+        if (playerIds.length > 1) {
+          // BUSTED!
+          someoneBusted = true;
+          const [x, y] = key.split(',').map(Number);
+          newBoard[y][x] = CellState.Busted;
+
+          playerIds.forEach(id => {
+            const player = updatedPlayers.find(p => p.id === id);
+            if (player) {
+              player.aliveMonsters -= 1;
+              if (player.aliveMonsters <= 0) {
+                player.isEliminated = true;
+              }
+            }
+          });
+        }
+      });
+
+      if (someoneBusted) {
+        setBoard(newBoard);
+        setPlayers(updatedPlayers);
+        
+        // Check if game is instantly over due to busts
+        const activePlayers = updatedPlayers.filter(p => !p.isEliminated);
+        if (activePlayers.length <= 1) {
+          setWinner(activePlayers[0] || null);
+          setGameState(GameState.GameOver);
+          return;
+        }
+      }
+
       setGameState(GameState.Seeking);
     } else {
       setGameState(GameState.Hiding);
     }
-  }, [players]);
+  }, [players, board]);
 
-  const hideGhost = useCallback((x: number, y: number) => {
+  const selectHideCoordinate = useCallback((x: number, y: number) => {
     if (gameState !== GameState.Hiding) return;
 
-    // Check if another player is already hiding here
-    const isOccupied = players.some(p => p.hiddenCoordinate?.x === x && p.hiddenCoordinate?.y === y);
-    if (isOccupied) return;
+    // Notice: We NO LONGER check for another player's occupancy here!
+    // Players can select the same block, but it will BUST them when the game starts.
 
     const updatedPlayers = [...players];
-    updatedPlayers[currentPlayerIndex].hiddenCoordinate = { x, y };
+    const current = updatedPlayers[currentPlayerIndex];
+
+    const existingIndex = current.hiddenCoordinates.findIndex(c => c.x === x && c.y === y);
+    if (existingIndex !== -1) {
+      // Toggle off (remove)
+      current.hiddenCoordinates.splice(existingIndex, 1);
+    } else {
+      // Toggle on (add) if under limit
+      if (current.hiddenCoordinates.length < current.monstersAllowed) {
+        current.hiddenCoordinates.push({ x, y });
+      }
+    }
+    
     setPlayers(updatedPlayers);
+  }, [gameState, players, currentPlayerIndex]);
+
+  const confirmHide = useCallback(() => {
+    if (gameState !== GameState.Hiding) return;
+    const current = players[currentPlayerIndex];
+    if (current.hiddenCoordinates.length !== current.monstersAllowed) return;
 
     // Go to next player
     const nextPlayerIndex = currentPlayerIndex + 1;
-    if (nextPlayerIndex < updatedPlayers.length) {
+    if (nextPlayerIndex < players.length) {
       setCurrentPlayerIndex(nextPlayerIndex);
       setGameState(GameState.PassingDevice);
     } else {
@@ -89,17 +156,20 @@ export const useBattleshipEngine = () => {
     if (board[y][x] !== CellState.Water) return;
 
     const newBoard = [...board].map(row => [...row]);
-    let hitPlayerId: string | null = null;
     let hitColor: GhostColor | null = null;
 
     // Check if we hit someone
     const updatedPlayers = [...players];
     for (let p of updatedPlayers) {
       if (p.id !== updatedPlayers[currentPlayerIndex].id && !p.isEliminated) {
-        if (p.hiddenCoordinate?.x === x && p.hiddenCoordinate?.y === y) {
-          p.isEliminated = true;
-          hitPlayerId = p.id;
+        const hitIndex = p.hiddenCoordinates.findIndex(c => c.x === x && c.y === y);
+        if (hitIndex !== -1) {
           hitColor = p.color;
+          p.aliveMonsters -= 1;
+          
+          if (p.aliveMonsters <= 0) {
+            p.isEliminated = true;
+          }
           break;
         }
       }
@@ -148,7 +218,8 @@ export const useBattleshipEngine = () => {
     winner,
     startGame,
     confirmPassDevice,
-    hideGhost,
+    selectHideCoordinate,
+    confirmHide,
     guessCoordinate,
     resetGame,
   };

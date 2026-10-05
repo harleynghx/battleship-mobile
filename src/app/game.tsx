@@ -12,7 +12,7 @@ export default function GameScreen() {
 
   const handleCellPress = (x: number, y: number) => {
     if (engine.gameState === GameState.Hiding) {
-      engine.hideGhost(x, y);
+      engine.selectHideCoordinate(x, y);
     } else if (engine.gameState === GameState.Seeking) {
       engine.guessCoordinate(x, y);
     }
@@ -53,7 +53,9 @@ export default function GameScreen() {
     
     if (engine.gameState === GameState.Hiding) {
       headerText = 'HIDE PHASE';
-      subHeaderText = 'TAP TO HIDE YOUR GHOST';
+      const placedCount = engine.currentPlayer?.hiddenCoordinates.length || 0;
+      const totalCount = engine.currentPlayer?.monstersAllowed || 0;
+      subHeaderText = `HIDE YOUR GHOSTS (${placedCount}/${totalCount})`;
     } else if (engine.gameState === GameState.Seeking) {
       headerText = 'SEEK PHASE';
       subHeaderText = 'GUESS A LOCATION';
@@ -73,7 +75,15 @@ export default function GameScreen() {
           board={engine.board}
           onCellPress={handleCellPress} 
           disabled={engine.gameState !== GameState.Hiding && engine.gameState !== GameState.Seeking}
+          selectedCoordinates={engine.gameState === GameState.Hiding ? engine.currentPlayer?.hiddenCoordinates : []}
+          selectedColor={engine.currentPlayer?.color}
         />
+
+        {engine.gameState === GameState.Hiding && engine.currentPlayer?.hiddenCoordinates.length === engine.currentPlayer?.monstersAllowed && (
+          <Pressable style={[styles.actionBtn, { marginTop: 30, borderColor: engine.currentPlayer?.color }]} onPress={engine.confirmHide}>
+            <Text style={[styles.actionBtnText, { color: engine.currentPlayer?.color }]}>CONFIRM HIDE</Text>
+          </Pressable>
+        )}
 
         {engine.gameState === GameState.Seeking && (
           <View style={styles.fleetPanel}>
@@ -107,7 +117,7 @@ export default function GameScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <Stack.Screen options={{ title: 'HIDE & SEEK', headerStyle: { backgroundColor: Colors.dark.backgroundElement }, headerTintColor: Colors.dark.text, headerTitleStyle: { fontFamily: 'PressStart2P', fontSize: 14 } }} />
+      <Stack.Screen options={{ title: 'HIDE & SEEK', headerStyle: { backgroundColor: Colors.dark.backgroundElement }, headerTintColor: Colors.dark.text, headerTitleStyle: { fontFamily: 'OrbitronBold', fontSize: 14 } }} />
       
       {engine.gameState === GameState.SetupPlayers && renderSetup()}
       {engine.gameState === GameState.PassingDevice && renderPassingDevice()}
@@ -134,14 +144,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 16,
     color: Colors.dark.text,
     marginBottom: 20,
     textAlign: 'center',
   },
   highlightTitle: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 20,
     marginBottom: 20,
     textAlign: 'center',
@@ -150,7 +160,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 10,
   },
   subtitle: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 10,
     color: Colors.dark.textSecondary,
     marginBottom: 40,
@@ -163,18 +173,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusText: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 14,
     marginBottom: 8,
   },
   subStatusText: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 12,
     color: Colors.dark.textSecondary,
     marginBottom: 8,
   },
   instructionText: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 10,
     color: Colors.dark.text,
   },
@@ -189,7 +199,7 @@ const styles = StyleSheet.create({
     width: 200,
   },
   actionBtnText: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 10,
     color: Colors.dark.text,
   },
@@ -201,7 +211,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.dark.text,
   },
   readyBtnText: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 14,
     color: Colors.dark.text,
   },
@@ -215,13 +225,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   panelTitle: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 12,
     color: Colors.dark.text,
     marginBottom: 15,
   },
   alivePlayer: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 10,
     marginBottom: 10,
   }

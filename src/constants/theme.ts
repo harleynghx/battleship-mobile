@@ -28,16 +28,16 @@ export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
 export const Fonts = Platform.select({
   ios: {
-    sans: 'PressStart2P',
-    serif: 'PressStart2P',
-    rounded: 'PressStart2P',
-    mono: 'PressStart2P',
+    sans: 'OrbitronBold',
+    serif: 'OrbitronBold',
+    rounded: 'OrbitronBold',
+    mono: 'OrbitronBold',
   },
   default: {
-    sans: 'PressStart2P',
-    serif: 'PressStart2P',
-    rounded: 'PressStart2P',
-    mono: 'PressStart2P',
+    sans: 'OrbitronBold',
+    serif: 'OrbitronBold',
+    rounded: 'OrbitronBold',
+    mono: 'OrbitronBold',
   },
   web: {
     sans: 'var(--font-display)',

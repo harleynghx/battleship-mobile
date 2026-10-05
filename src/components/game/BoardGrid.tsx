@@ -8,29 +8,68 @@ interface BoardGridProps {
   board: CellState[][];
   onCellPress: (x: number, y: number) => void;
   disabled?: boolean;
+  selectedCoordinates?: { x: number, y: number }[];
+  selectedColor?: string;
 }
 
 const { width } = Dimensions.get('window');
 const BOARD_PADDING = 90; 
 const CELL_SIZE = Math.floor((width - BOARD_PADDING) / 10);
 
-const GhostMarker = ({ color = '#E0161A', scaleAnim }: { color?: string, scaleAnim?: Animated.Value }) => (
-  <Animated.View style={[styles.ghostBody, { backgroundColor: color, transform: scaleAnim ? [{ scale: scaleAnim }] : [] }]}>
-    <View style={styles.ghostEyesContainer}>
-      <View style={styles.ghostEye}>
-        <View style={styles.ghostPupil} />
-      </View>
-      <View style={styles.ghostEye}>
-        <View style={styles.ghostPupil} />
-      </View>
-    </View>
-    <View style={styles.ghostLegsContainer}>
-       <View style={[styles.ghostLeg, { backgroundColor: color }]} />
-       <View style={[styles.ghostLeg, { backgroundColor: color }]} />
-       <View style={[styles.ghostLeg, { backgroundColor: color }]} />
-    </View>
-  </Animated.View>
-);
+import Svg, { Path, Ellipse, Circle } from 'react-native-svg';
+
+const AnimatedSvg = Animated.createAnimatedComponent(View);
+
+const GhostMarker = ({ color = '#E0161A', scaleAnim, isPreview = false }: { color?: string, scaleAnim?: Animated.Value, isPreview?: boolean }) => {
+  const hoverAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(hoverAnim, { toValue: -2, duration: 500, useNativeDriver: true }),
+        Animated.timing(hoverAnim, { toValue: 2, duration: 500, useNativeDriver: true }),
+        Animated.timing(hoverAnim, { toValue: 0, duration: 500, useNativeDriver: true })
+      ])
+    ).start();
+  }, [hoverAnim]);
+
+  // Combine scale and hover animations if needed
+  const transform = scaleAnim ? [{ scale: scaleAnim }, { translateY: hoverAnim }] : [{ translateY: hoverAnim }];
+
+  // Perfect match to the CSS clip-path polygon from ArcadeWebView
+  const ghostPath = `
+    M 0 50
+    A 50 50 0 0 1 100 50
+    L 100 120
+    L 90.56 108.67
+    L 82.44 88.34
+    L 75.44 108.67
+    L 65.13 120
+    L 56.49 108.67
+    L 47.44 88.34
+    L 42.25 109.8
+    L 31.22 120
+    L 21.24 110.5
+    L 15 88.34
+    L 8.5 109.8
+    L 0 120
+    Z
+  `;
+
+  return (
+    <AnimatedSvg style={{ width: CELL_SIZE * 0.8, height: CELL_SIZE * 0.8 * 1.2, opacity: isPreview ? 0.6 : 1, transform }}>
+      <Svg width="100%" height="100%" viewBox="0 0 100 120">
+        <Path d={ghostPath} fill={color} />
+        
+        <Ellipse cx="37.5" cy="50" rx="15" ry="18.75" fill="white" />
+        <Ellipse cx="80" cy="50" rx="15" ry="18.75" fill="white" />
+        
+        <Circle cx="42.5" cy="50" r="11.25" fill="#4A46BA" />
+        <Circle cx="87.5" cy="50" r="11.25" fill="#4A46BA" />
+      </Svg>
+    </AnimatedSvg>
+  );
+};
 
 const MAZE_WALLS = [
   ['tl', 't', 'tb', 't', 'tr', 'tl', 't', 'tb', 't', 'tr'],
@@ -45,17 +84,17 @@ const MAZE_WALLS = [
   ['bl', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'br'],
 ];
 
-const AnimatedCell = ({ cell, onPress, disabled, x, y }: { cell: CellState, onPress: () => void, disabled: boolean, x: number, y: number }) => {
+const AnimatedCell = ({ cell, onPress, disabled, x, y, isSelectedPreview, selectedColor }: { cell: CellState, onPress: () => void, disabled: boolean, x: number, y: number, isSelectedPreview: boolean, selectedColor?: string }) => {
   const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (cell !== CellState.Water) {
+    if (cell !== CellState.Water || isSelectedPreview) {
       Animated.sequence([
         Animated.timing(scale, { toValue: 1.3, duration: 100, useNativeDriver: true }),
         Animated.spring(scale, { toValue: 1, friction: 3, useNativeDriver: true })
       ]).start();
     }
-  }, [cell]);
+  }, [cell, isSelectedPreview]);
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -74,13 +113,15 @@ const AnimatedCell = ({ cell, onPress, disabled, x, y }: { cell: CellState, onPr
           walls.includes('b') && styles.wallBottom,
           walls.includes('l') && styles.wallLeft,
         ]}>
-          {(cell === CellState.Water) && (
+          {(cell === CellState.Water && !isSelectedPreview) && (
             <View style={styles.pacDot} />
           )}
+          {isSelectedPreview && <GhostMarker color={selectedColor} scaleAnim={scale} isPreview={true} />}
           {cell === CellState.HitBlinky && <GhostMarker color={GhostColor.Blinky} scaleAnim={scale} />}
           {cell === CellState.HitPinky && <GhostMarker color={GhostColor.Pinky} scaleAnim={scale} />}
           {cell === CellState.HitInky && <GhostMarker color={GhostColor.Inky} scaleAnim={scale} />}
           {cell === CellState.HitClyde && <GhostMarker color={GhostColor.Clyde} scaleAnim={scale} />}
+          {cell === CellState.Busted && <GhostMarker color="#555555" scaleAnim={scale} />}
           {cell === CellState.Miss && <View style={styles.missDot} />}
         </View>
       </View>
@@ -92,6 +133,8 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
   board, 
   onCellPress, 
   disabled = false,
+  selectedCoordinates = [],
+  selectedColor,
 }) => {
   return (
     <View style={styles.boardContainer}>
@@ -107,6 +150,8 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
                   cell={cell}
                   onPress={() => onCellPress(x, y)}
                   disabled={disabled}
+                  isSelectedPreview={selectedCoordinates.some(c => c.x === x && c.y === y)}
+                  selectedColor={selectedColor}
                 />
               ))}
             </View>
@@ -177,44 +222,48 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   ghostBody: {
-    width: 20,
-    height: 24,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
+    width: CELL_SIZE * 0.75,
+    height: CELL_SIZE * 0.75,
+    borderTopLeftRadius: (CELL_SIZE * 0.75) / 2,
+    borderTopRightRadius: (CELL_SIZE * 0.75) / 2,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
     position: 'relative',
+    paddingTop: CELL_SIZE * 0.15,
   },
   ghostEyesContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    marginTop: 4,
+    justifyContent: 'space-between',
+    width: '60%',
+    paddingHorizontal: '5%',
   },
   ghostEye: {
-    width: 6,
-    height: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 3,
+    width: CELL_SIZE * 0.2,
+    height: CELL_SIZE * 0.25,
+    backgroundColor: 'white',
+    borderRadius: CELL_SIZE * 0.1,
     justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingLeft: 1,
+    alignItems: 'flex-end',
+    paddingRight: 1,
   },
   ghostPupil: {
-    width: 3,
-    height: 3,
-    backgroundColor: '#0000FF',
-    borderRadius: 1.5,
+    width: CELL_SIZE * 0.1,
+    height: CELL_SIZE * 0.1,
+    backgroundColor: '#0000AA',
+    borderRadius: CELL_SIZE * 0.05,
   },
   ghostLegsContainer: {
     position: 'absolute',
-    bottom: -3,
+    bottom: -(CELL_SIZE * 0.1),
     left: 0,
     right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   ghostLeg: {
-    width: 6,
-    height: 6,
-    borderBottomLeftRadius: 3,
-    borderBottomRightRadius: 3,
+    width: CELL_SIZE * 0.24,
+    height: CELL_SIZE * 0.24,
+    transform: [{ rotate: '45deg' }],
   },
 });

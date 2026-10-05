@@ -71,12 +71,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 28,
     color: Colors.dark.text,
   },
   subtitle: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 14,
     color: Colors.dark.textSecondary,
     marginTop: 15,
@@ -98,13 +98,13 @@ const styles = StyleSheet.create({
     paddingRight: 10,
   },
   settingTitle: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 14,
     color: Colors.dark.text,
     marginBottom: 10,
   },
   settingDesc: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 8,
     color: Colors.dark.textSecondary,
     lineHeight: 12,
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   resetBtnText: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 12,
     color: Colors.dark.backgroundSelected,
   },
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.dark.backgroundElement,
   },
   backBtnText: {
-    fontFamily: 'PressStart2P',
+    fontFamily: 'OrbitronBold',
     fontSize: 12,
     color: Colors.dark.text,
   }

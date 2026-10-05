@@ -4,17 +4,19 @@ export type Coordinate = {
 };
 
 export enum GhostColor {
-  Blinky = '#E0161A', // Red
-  Pinky = '#FFB8FF',  // Pink
-  Inky = '#00FFFF',   // Cyan
-  Clyde = '#FFB852',  // Orange
+  Blinky = '#FF4D6D', // Vibrant Strawberry
+  Pinky = '#FF66CC',  // Saturated Bubblegum
+  Inky = '#33E0FF',   // Bright Sky Cyan
+  Clyde = '#FFB833',  // Vibrant Mango/Orange
 }
 
 export type Player = {
   id: string;
   name: string;
   color: GhostColor;
-  hiddenCoordinate: Coordinate | null;
+  hiddenCoordinates: Coordinate[];
+  monstersAllowed: number;
+  aliveMonsters: number;
   isEliminated: boolean;
 };
 
@@ -26,6 +28,7 @@ export enum CellState {
   HitPinky = 'HIT_PINKY',
   HitInky = 'HIT_INKY',
   HitClyde = 'HIT_CLYDE',
+  Busted = 'BUSTED', // When 2+ players hide in the exact same spot
 }
 
 export enum GameState {
